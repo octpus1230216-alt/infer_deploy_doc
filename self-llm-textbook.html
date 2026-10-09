@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="gEpsxk3mmUCtaMCRg3hCf9">
+<head data-page-node-id="iDDrcMlSMHU9jO1H84p7ZE">
+<meta charset="UTF-8" data-page-node-id="xfmh6hJVE7HorSUiFe9JFr">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="hR7ZvvuoBTIAnsw5eW3mZV">
+<title>开源大模型食用指南 · 教科书版（self-llm 重构）</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --panel:#ffffff; --ink:#1f2933; --muted:#5b6b7b;
+    --line:#e3e8ee; --brand:#2563eb; --brand-soft:#eaf1ff; --accent:#0f766e;
+    --warn:#b45309; --warn-soft:#fff4e0; --code-bg:#0f172a; --code-ink:#e2e8f0;
+    --tip:#7c3aed; --tip-soft:#f3effe;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.8;font-size:16px}
+  /* layout */
+  #sidebar{position:fixed;top:0;left:0;width:280px;height:100vh;overflow-y:auto;
+    background:var(--panel);border-right:1px solid var(--line);padding:22px 16px}
+  #sidebar h2{font-size:15px;margin:0 0 10px;color:var(--brand)}
+  #sidebar .sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+  #sidebar a{display:block;color:var(--ink);text-decoration:none;font-size:13.5px;
+    padding:6px 10px;border-radius:8px;margin:2px 0}
+  #sidebar a:hover{background:var(--brand-soft);color:var(--brand)}
+  #sidebar a .ch{color:var(--brand);font-weight:600;margin-right:6px}
+  #content{margin-left:280px;padding:40px 56px 120px;max-width:920px}
+  /* cover */
+  .cover{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border-radius:18px;
+    padding:48px 40px;margin-bottom:36px}
+  .cover .tag{display:inline-block;background:rgba(255,255,255,.18);padding:4px 12px;
+    border-radius:999px;font-size:13px;margin-bottom:14px}
+  .cover h1{font-size:34px;margin:0 0 10px;line-height:1.3}
+  .cover p{margin:6px 0;opacity:.92;font-size:15px}
+  .cover .meta{margin-top:18px;font-size:13px;opacity:.85}
+  /* headings */
+  h2.chapter{font-size:26px;margin:48px 0 8px;padding-top:24px;border-top:3px solid var(--brand-soft)}
+  h2.chapter .num{color:var(--brand);font-weight:800;margin-right:10px}
+  h3{font-size:19px;margin:30px 0 10px;color:var(--accent)}
+  h4{font-size:16px;margin:22px 0 8px;color:var(--ink)}
+  p{margin:12px 0}
+  ul,ol{margin:12px 0;padding-left:24px}
+  li{margin:6px 0}
+  /* callouts */
+  .box{border-radius:12px;padding:14px 18px;margin:18px 0;border:1px solid var(--line)}
+  .box .t{font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .plain{background:var(--brand-soft);border-color:#cfe0ff}
+  .plain .t{color:var(--brand)}
+  .analogy{background:var(--tip-soft);border-color:#e3d8fb}
+  .analogy .t{color:var(--tip)}
+  .warn{background:var(--warn-soft);border-color:#f3dcae}
+  .warn .t{color:var(--warn)}
+  .map{background:#eef6f4;border-color:#cfe8e2}
+  .map .t{color:var(--accent)}
+  /* code */
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:12px;padding:16px 18px;
+    overflow-x:auto;font-size:13.5px;line-height:1.65;margin:16px 0}
+  code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+  pre code{white-space:pre}
+  :not(pre)>code{background:#eef1f5;color:#b91c1c;padding:2px 6px;border-radius:6px;font-size:13.5px}
+  /* tables */
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel)}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:#f0f4f9;color:var(--ink);font-weight:700}
+  tr:nth-child(even) td{background:#fafbfc}
+  /* flow */
+  .flow{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin:18px 0}
+  .flow .step{flex:1 1 150px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:14px;text-align:center}
+  .flow .step .n{display:inline-block;background:var(--brand);color:#fff;border-radius:999px;
+    width:26px;height:26px;line-height:26px;font-size:13px;margin-bottom:8px}
+  .flow .step b{display:block;margin-bottom:4px}
+  .flow .step span{font-size:12.5px;color:var(--muted)}
+  .arrow{display:flex;align-items:center;color:var(--brand);font-size:22px;font-weight:700}
+  .pill{display:inline-block;background:var(--brand-soft);color:var(--brand);border-radius:999px;
+    padding:2px 10px;font-size:12.5px;margin:2px 3px}
+  .toc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+  .toc-grid a{display:block;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;text-decoration:none;color:var(--ink);font-size:14px}
+  .toc-grid a:hover{border-color:var(--brand);color:var(--brand)}
+  .toc-grid a b{color:var(--brand)}
+  .footnote{color:var(--muted);font-size:13px;border-top:1px dashed var(--line);margin-top:40px;padding-top:16px}
+  .kbd{background:#eef1f5;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:12.5px}
+  @media(max-width:900px){#sidebar{display:none}#content{margin-left:0;padding:24px}}
+</style>
+</head>
+<body data-page-node-id="8RFvgvVl3OubrrrtG158JC">
+
+<!-- ============ SIDEBAR ============ -->
+<nav id="sidebar" data-page-node-id="qbvsNlhzlyti7HFTTUpcUd">
+  <h2 data-page-node-id="nF0HvvWB8a9McFv3V5yLuv">📘 开源大模型食用指南</h2>
+  <div class="sub" data-page-node-id="xGRr1yZIWUV5GQWWY0vpEL">self-llm 教科书重构版 · 主线导航</div>
+  <a href="#cover" data-page-node-id="R1Wnvz3V7AT8MmOpKIjn79"><span class="ch" data-page-node-id="z6Tw0F8OAjRZ7xe7vnpXa3">★</span>封面 / 如何使用</a>
+  <a href="#ch0" data-page-node-id="vQr534XGsnKyCkNUhVtCCY"><span class="ch" data-page-node-id="qw39eAh4wAZc7bZ9LsjS0a">0</span>大模型是什么</a>
+  <a href="#ch1" data-page-node-id="gN4Zv7PFGRcEkySvQIAMkh"><span class="ch" data-page-node-id="4ndeZU350NZ3lTy9PpfaTy">1</span>仓库地图与学习路线</a>
+  <a href="#ch2" data-page-node-id="jjApauzwOeKJfrJYutkwdf"><span class="ch" data-page-node-id="SDYj79BJ8AXyY4J90CBLjh">2</span>环境配置（地基）</a>
+  <a href="#ch3" data-page-node-id="Kdqcz7OB6WcScVIM8CmmXF"><span class="ch" data-page-node-id="mjDMvtCqf4A6QjnVMeMqln">3</span>部署五法</a>
+  <a href="#ch4" data-page-node-id="XTbglYwjxXreI0SILtOWGP"><span class="ch" data-page-node-id="2isXnaYI2WZwu4qE6MoStS">4</span>模型微调</a>
+  <a href="#ch5" data-page-node-id="om69i04jmgUHnNAWoiWYwK"><span class="ch" data-page-node-id="XYBg8qhvBk1QxXKGENV4p2">5</span>多模态与进阶</a>
+  <a href="#ch6" data-page-node-id="6YYG2sOzuqDCucSoxQ2EEX"><span class="ch" data-page-node-id="gdK2GUYRyQRCf8k6PlW0fR">6</span>不同硬件平台</a>
+  <a href="#ch7" data-page-node-id="AT4eJRhNnFxzyYK3dU4V84"><span class="ch" data-page-node-id="heIHNiw2F7BrJrODuGPdAR">7</span>实战项目案例</a>
+  <a href="#ch8" data-page-node-id="mgFGZrmgER4cAFCWo08hWP"><span class="ch" data-page-node-id="2Qbe5yMHYFDEQGg9xWNT1q">8</span>学习路线与排坑</a>
+  <a href="#appendix" data-page-node-id="kvgiCR8kOxFwrXTfxoLZSD"><span class="ch" data-page-node-id="LNgV1Jx1bwBTON8GJ3Fi3W">附</span>术语表</a>
+</nav>
+
+<!-- ============ CONTENT ============ -->
+<div id="content" data-page-node-id="yoFl0wKatshhaSQvORgF2V">
+
+  <section class="cover" id="cover" data-page-node-id="65a3xUvaewSVtg9rVH4msz">
+    <span class="tag" data-page-node-id="eANRKXTfC6Mdmiwox7JcA7">Datawhale · self-llm 重构教科书</span>
+    <h1 data-page-node-id="rpfinJ8BewILvuYEUH3ija">开源大模型食用指南<br data-page-node-id="XlFkNF11AiK3XxNXxdEimC">教科书版</h1>
+    <p data-page-node-id="tSIVNubwZavfegrg0XglPl">把 <code style="color:#fff;background:rgba(255,255,255,.15);padding:1px 6px;border-radius:5px" data-page-node-id="sWzFOt1zRuV8DiKMEfqKlU">github.com/datawhalechina/self-llm</code> 里零散的 50+ 模型教程，重新组织成一本你能一口气读完、读完就能上手的“主线手册”。</p>
+    <p data-page-node-id="aPRfJsFgwB1DXi7HJwWM3W">面向人群：<b data-page-node-id="SQsG3W2t85itogKjS2SUsK">完全零基础</b>、想自己把开源大模型跑起来并微调成专属模型的小白。</p>
+    <div class="meta" data-page-node-id="M8n143W4G1HOn2GOJH9Hgn">编写原则：先讲清楚“为什么”，再讲“怎么做” · 用生活比喻替代术语堆砌 · 每一章都给可直接抄的代码片段与对比表</div>
+  </section>
+
+  <div class="box plain" data-page-node-id="LjwdmWoqAYTGR6v7ASNMaA">
+    <div class="t" data-page-node-id="xU2JtXG1gpSvR0gZjfyq1q">🧭 这本书和原仓库的关系</div>
+    原仓库像一座“模型超市”：每个模型一个货架，货架上摆着环境、部署、微调几张说明书。好处是细，坏处是<b data-page-node-id="wEzMFLFzByIMnkXkc5qPIJ">没有主线</b>——你看了 10 个模型，会觉得每篇都在重复又每篇都不一样。<br data-page-node-id="TJqzO89Wj4G6DYgFJ8I3Px">
+    本书做的事：先把所有货架背后<b data-page-node-id="010Y0M24V6FVRkFMqIKPp1">共同的套路抽出来</b>（第 2~4 章），再用 1~2 个代表模型做一遍完整示范，最后告诉你“剩下 50 个模型怎么用同一套思维去读”。<b data-page-node-id="jy4wILevF6riRbHQTjmMyT">掌握主线，你就掌握了全部。</b>
+  </div>
+
+  <h2 class="chapter" id="ch0" data-page-node-id="PQjyY2aZFazEWFRu1SZcU1"><span class="num" data-page-node-id="CzQRMWjVnT50AofDRPQZR6">第 0 章</span>大模型是什么（先建立直觉）</h2>
+
+  <div class="box plain" data-page-node-id="p9LPH680qnwtAqA303ld8b">
+    <div class="t" data-page-node-id="AU3qOaIywNLktJAtVtXvVj">💡 一句话大白话</div>
+    大模型（LLM）就是一个“读过了几乎整个互联网、然后被训练成超级接话高手”的程序。你给它一句话（提示 / prompt），它接着往下写最合理的下一句。
+  </div>
+
+  <div class="box analogy" data-page-node-id="g7M3TIr0EG26GVcLEGMmXH">
+    <div class="t" data-page-node-id="zEDc4tU7SpctQKgPWq1It2">🔧 生活比喻</div>
+    把它想成一家<b data-page-node-id="uQEmwloW8BD9cbHbdBsCSo">超级图书馆里泡大的作家</b>：你开头写“从前有座山”，他顺着上下文续写“山里有座庙”。他不会“查资料”，而是靠训练时记住的语言规律“猜”下一个字。猜得越准，模型越聪明。
+  </div>
+
+  <h3 data-page-node-id="i0zor5u8wBQyWtzCuazF1v">0.1 三个你一定会遇到的词</h3>
+  <table data-page-node-id="GzYAI0jgMqSnGofMadwWK6">
+    <tr data-page-node-id="MF9pPG4ejlAAsqG32GsFmh"><th data-page-node-id="aX0pmRechNzfeJpSZdpepB">词</th><th data-page-node-id="GGUojKNKGRZBx7HhvPDEd8">大白话</th><th data-page-node-id="btbokSNGXiXkcHPZlbTMmA">仓库里对应什么</th></tr>
+    <tr data-page-node-id="YLZBc7r4r6Yih2UslNuG8w"><td data-page-node-id="DA46jqJUpyLXiTAjUy2C5l"><b data-page-node-id="hXSu9D9cUNNvWAhm7BTdI7">预训练 (Pretrain)</b></td><td data-page-node-id="K9jyFfpyMqgji70S6xQinm">让模型“读万卷书”，学会通用的语言规律。这一步由厂商完成，你不用做。</td><td data-page-node-id="JB4hBDtNh1j9dbADhkAlZO">你下载的模型权重，已经是预训练好的。</td></tr>
+    <tr data-page-node-id="SXCOWcVTvByIgiybCv5Dkv"><td data-page-node-id="ISIFIhEDtZbdw1PnpzrhUP"><b data-page-node-id="72Yd0vUSCGcTVfIsgkp0aP">部署 (Deploy)</b></td><td data-page-node-id="tzWEs9wBTnF6VJowmVhnDy">把模型“请”到你的电脑/服务器上，让它能对话、能响应请求。</td><td data-page-node-id="KnjixxciBfdfWqoIK8KLQo">第 3 章的五个方法。</td></tr>
+    <tr data-page-node-id="eKqvekczaLjOmduXTL5419"><td data-page-node-id="gNKyHqGKqR6QMm7jpttf3E"><b data-page-node-id="Aw3pCkuj6R2uU5h3MILNwz">微调 (Fine-tune)</b></td><td data-page-node-id="AOuhlaypNndIU65dHgp0KF">给通用模型“开小灶”，用你自己的数据让它变成某个领域的专家（比如甄嬛语气、数学老师）。</td><td data-page-node-id="4EQ5p91SYGymPcCK2tHEnG">第 4 章。</td></tr>
+  </table>
+
+  <h3 data-page-node-id="InPoGaBucDcePbrPNJlB0S">0.2 为什么需要“本地部署”，而不是直接用网页版？</h3>
+  <ul data-page-node-id="r2GsoGZLA5rsnoOyLrrBAh">
+    <li data-page-node-id="X6G0wuAhDNhqVLsgx8weUI"><b data-page-node-id="Rrfk8bSHLHiIRYk1iOgFFf">免费 & 无限次</b>：网页/API 按量收费，本地部署一次装好随便用。</li>
+    <li data-page-node-id="115afW5vHolKCv3nVq9cWP"><b data-page-node-id="9kb8lAeqaIl7Jtvk19Inhw">数据隐私</b>：敏感数据不出内网，适合公司/科研场景。</li>
+    <li data-page-node-id="HYi5typH3aLcGXQDE3bI9q"><b data-page-node-id="cjmVp5z8c6bADMGpc5pmrg">可定制</b>：只有本地模型能被你微调成专属模型。</li>
+    <li data-page-node-id="K2rznUryxeXTHgKLZRN4wt"><b data-page-node-id="BZ8iWDxcCop34BEZasgriC">需要硬件</b>：模型越大越吃显卡（GPU）。7B 模型约需 16GB 显存，70B 需要多卡。这是本地的最大门槛。</li>
+  </ul>
+
+  <div class="box warn" data-page-node-id="SADuegRht8HTWsd1VgsTXC">
+    <div class="t" data-page-node-id="gXROxPVeB5HPwQsdasxTxE">⚠️ 先认清你的“家底”</div>
+    本书默认你在 <b data-page-node-id="PFsQFK7TNcEs35BnXuzEQm">Linux + NVIDIA 显卡（CUDA）</b> 环境。云算力平台（AutoDL、阿里云）是最省事的入门方式——租一台带 GPU 的机器，按小时计费。原仓库 <code data-page-node-id="gkWBJZ1Mu4XNfuZjdaCUcn">models/General-Setting/02-AutoDL开放端口.md</code> 专门讲怎么把云机器的端口映射到本地浏览器。
+  </div>
+
+  <h2 class="chapter" id="ch1" data-page-node-id="wkB8eEOecFDICFD7hxIEqj"><span class="num" data-page-node-id="hZd1gXYHUahBv4yYJFHjXs">第 1 章</span>仓库地图与学习路线（掌握主线的钥匙）</h2>
+
+  <h3 data-page-node-id="NQVS9SmscJGxz0G802FPG8">1.1 仓库的真实结构（剥掉迷惑）</h3>
+  <p data-page-node-id="IGB3JdRgJv3OdMhUdBHhSu">别被 50+ 模型吓到。仓库顶层其实只有这几类文件夹：</p>
+  <table data-page-node-id="nNMoiyQaFysERJSHYyIoSo">
+    <tr data-page-node-id="TZkojCnW1AlDtYb8RbvhhI"><th data-page-node-id="XOYTOSurG3bCcGQ0QjrhCN">文件夹</th><th data-page-node-id="fxj4SzKhGP4lWq4IFQhEXB">它是干什么的</th><th data-page-node-id="whgAGjGDjUCHkzJ5SZUEWN">你要不要细看</th></tr>
+    <tr data-page-node-id="d0K0AtiViIvl69zzjT8bMM"><td data-page-node-id="sHl0BhFEHN2VSL2CDoCbCe"><code data-page-node-id="XZtpPb2p9STUDFHrDmCNVV">models/</code></td><td data-page-node-id="nXc9Wi6ykX38DNlSbBTaSZ"><b data-page-node-id="JXFXhf8GoAjOUyXdAbWm4T">主角</b>。50+ 模型，每个模型一个子文件夹，里面是该模型的部署+微调教程。</td><td data-page-node-id="irAORpMCrSk2yQLNPUKpA9">✅ 核心，按本文主线读</td></tr>
+    <tr data-page-node-id="lwEVHJxpvNC3P8eCvPHzdR"><td data-page-node-id="EfkW7OpDxhjSrLtB8ltxUc"><code data-page-node-id="mC1IX41EsL36M2TEQBRJHv">models/General-Setting/</code></td><td data-page-node-id="QMgJcZgq9MC7ufwjLx3LN2">所有模型<b data-page-node-id="3FNf6Ud5ZWzkUhQQEb7nOj">通用</b>的铺垫：换源、开端口、模型下载、怎么提 Issue/PR。</td><td data-page-node-id="5PaH2nl9f6FA5jjd8z0HBs">✅ 必读，相当于“公共地基”</td></tr>
+    <tr data-page-node-id="N5upvsnckc4sepx7Nty7rv"><td data-page-node-id="uQoKkMlP2dBDcgBOchyMmK"><code data-page-node-id="VQ188CmDjRMCbtdUlIWnua">dataset/</code></td><td data-page-node-id="c8CLg1kPJlFQtdEIzzmP30">微调用的示例数据集（如甄嬛语料 <code data-page-node-id="1IC4lLqlJDwGqdLpJzM52Z">huanhuan.json</code>）。</td><td data-page-node-id="Os6duBybIDpgUbFagUHqRQ">微调时参考</td></tr>
+    <tr data-page-node-id="N7e5AgFQa0WB0WJLFSwgBL"><td data-page-node-id="gdfus6rVzpfhas3YaMkw9j"><code data-page-node-id="vW08geaJUp3iBzxDP18771">examples/</code></td><td data-page-node-id="67iPArlDHBagHTJw2Fd0TF">完整项目案例：Chat-嬛嬛、天机、AMChat、数字生命。</td><td data-page-node-id="v5asPedp3uQLuTGcv92MzN">学完主线后进阶看</td></tr>
+    <tr data-page-node-id="hiBze4t2uvIIElGJuGQT3u"><td data-page-node-id="SiVnlLvyo9j0qezfsteHXB"><code data-page-node-id="HkYOijXdt2E1Qw96WufIcD">models_amd/</code> <code data-page-node-id="YDobi3QnOyJCIm5ECNwH5P">models_ascend/</code> <code data-page-node-id="BzkNAcb8VWOGVZLJJMezuB">models_mlx/</code></td><td data-page-node-id="LR2aL04o0ZUUgDGdtOnWgc">AMD 显卡 / 华为昇腾 NPU / 苹果 M 芯片的专属版本。</td><td data-page-node-id="Ncn5ONeQAl9AKz6jn94XMr">只有用对应硬件才看</td></tr>
+  </table>
+
+  <h3 data-page-node-id="efomrNGaO1jvEE36t9c0i9">1.2 每个模型文件夹的“标准长相”</h3>
+  <p data-page-node-id="uCLdsZXnD48p66Roim6FKf">这是全书的<b data-page-node-id="cVAzUxJzDxn1dPk1VB6vGx">最重要发现</b>：几乎每个模型文件夹内部，都是同一套编号文件。</p>
+  <pre data-page-node-id="HrAVjGCbObHA99eY9tmCjW"><code data-page-node-id="W2xBhvn9E0KpYuxvlWVpEb">models/Qwen2.5/
+├─ 01-...FastApi 部署调用.md     ← 方法①：做成 API 服务
+├─ 02-...Langchain 接入.md       ← 方法⑤：接应用框架
+├─ 03-...vLLM 部署调用.md        ← 方法④：高性能推理
+├─ 04-...WebDemo 部署.md         ← 方法③：网页聊天界面
+├─ 05-...Lora 微调.md            ← 微调（第4章）
+├─ 06-...o1-like 推理链.md       ← 进阶玩法
+├─ 07-...Lora 微调 SwanLab版.md  ← 微调+可视化
+├─ readme.md                     ← 该模型简介
+└─ images/                       ← 截图</code></pre>
+  <div class="box map" data-page-node-id="SRikCyhwMrYUXWsDxcv1GS">
+    <div class="t" data-page-node-id="EkggXPQT1PJArFucVRt7V3">🗺️ 主线地图（记住这张图，等于记住整本书）</div>
+    <div class="flow" data-page-node-id="ua2XXTgWSurkKuChKiYMz9">
+      <div class="step" data-page-node-id="pTxOiJouisIiiWxzshrnyo"><span class="n" data-page-node-id="vpBA9udJCNgdNHY2uwYslB">1</span><b data-page-node-id="fztwLkAUYQb6Br0MEphwBc">环境配置</b><span data-page-node-id="SED4mi7B9blZTSGOiHWFVM">装好 Python/conda、换源、下模型</span></div>
+      <div class="arrow" data-page-node-id="lWeJxWE6ZKYtXf5CFD7LSf">→</div>
+      <div class="step" data-page-node-id="Ys3FbgNjNBPYiYecmymV5L"><span class="n" data-page-node-id="bzPWEWY6RQnAx5emhKd2gq">2</span><b data-page-node-id="RFVTrIw5wYyiNUxg6y49eg">模型部署</b><span data-page-node-id="HCXJ41zGnP08eCvdugEkeq">让模型能对话（5 种方法）</span></div>
+      <div class="arrow" data-page-node-id="L8Bh7LTFfPAX7rSkUzoIEf">→</div>
+      <div class="step" data-page-node-id="XZkZQsLV0BqiMEFoAMMG2f"><span class="n" data-page-node-id="gWRG4WTk0fWTAoeGAcY0eP">3</span><b data-page-node-id="DkvKljQIpHW7SziYiEKAhP">模型微调</b><span data-page-node-id="Bc3fpGKZQCPoWIm6ubj6Yr">用自有数据变成专属模型</span></div>
+      <div class="arrow" data-page-node-id="LDDEhtpUg6ivHmLZsJTKFm">→</div>
+      <div class="step" data-page-node-id="MaWXze5A9AJbU7TV89n8NF"><span class="n" data-page-node-id="uYGEWHwmrXXxmveLRbJDGd">4</span><b data-page-node-id="g4BDiIVbpQTF3i0Ug8o6i9">应用/进阶</b><span data-page-node-id="8QkF0bAQnEqKsbDVAaFEFQ">多模态、推理链、项目实战</span></div>
+    </div>
+    <p style="margin:10px 0 0" data-page-node-id="gzsQ3hOWc7IMHhpDBFNzAj">原仓库官方建议：<b data-page-node-id="9Ux3WKsRzwVsVF8rLLNalL">先环境 → 再部署 → 后微调</b>。因为环境是基础、部署是上手、微调是进阶。初学者优先挑 <span class="pill" data-page-node-id="NnRJnPu375HHVbv45n2JWn">Qwen2.5</span> <span class="pill" data-page-node-id="ktye7TRFvKwDApSzPLy3mr">InternLM2</span> <span class="pill" data-page-node-id="9xOM0U35FnwiYHCDs7n4CS">MiniCPM</span> 这类资料全、门槛低的模型。</p>
+  </div>
+
+  <h3 data-page-node-id="gIYb2gZ4l25lr1eJuxDy8T">1.3 推荐学习顺序</h3>
+  <ol data-page-node-id="Qw9OvJ7psG9Hthkz1x6plF">
+    <li data-page-node-id="7DBiEDFUlHnYaXojXeKp4e">读完本书第 0~4 章（建立主线）。</li>
+    <li data-page-node-id="7CV10xewY5wnxV9lSX52J9">挑 <b data-page-node-id="nZx8EkubF40S8GT9LSZVFA">Qwen2.5</b> 一个模型，照着它的 01→04 文件亲手跑一遍部署。</li>
+    <li data-page-node-id="pv8m7lINtGnHhOHnPN05Xq">跑通后，照它的 05/07 文件做一次 LoRA 微调（用仓库自带甄嬛数据）。</li>
+    <li data-page-node-id="5iP80yiV3A0pxUmnLnnlBu">换一个你感兴趣的多模态模型（如 Qwen2-VL）体会差异。</li>
+    <li data-page-node-id="HA7L8YaMQ47om28QaWYCkU">读 <code data-page-node-id="kdzVdTt8zGCN1prUmzMeud">examples/</code> 里的项目，把能力串成产品。</li>
+  </ol>
+
+  <h2 class="chapter" id="ch2" data-page-node-id="1SFXmnkiQSWA9JAxV4pmC9"><span class="num" data-page-node-id="RmBNRGfVbETCWmhAwNhqsh">第 2 章</span>环境配置（地基，做错后面全垮）</h2>
+
+  <div class="box plain" data-page-node-id="V17Z56sln4RdjQBwTPGBZB">
+    <div class="t" data-page-node-id="Gkt6pJm2aSZ5H9idCY53Zs">💡 一句话大白话</div>
+    环境配置 = 给你的模型准备一间“带对电、装对软件”的房间。房间不对，模型根本进不来。
+  </div>
+
+  <h3 data-page-node-id="e2los4RgIrxFqR1kpAly6S">2.1 四个地基动作（对应 <code data-page-node-id="16vXAbETpdXB7i3pDKUasY">General-Setting</code>）</h3>
+  <table data-page-node-id="eLlgEbTsG5AZcUoc2sFGcs">
+    <tr data-page-node-id="i2mBdO8mcyd3P8Bq9VtlLa"><th data-page-node-id="7oQpT3QxpBOGpGZA7quzGw">动作</th><th data-page-node-id="btaNYRoFu276DS2DGpHU0q">解决什么问题</th><th data-page-node-id="sAR0F7VszuHfGhCUwYCipo">对应文件</th></tr>
+    <tr data-page-node-id="EGVXHNZHTqaN4U0ckXTO6S"><td data-page-node-id="6fPG25ttYTI2k8RBKZ1Xce">① pip / conda 换源</td><td data-page-node-id="e7cWbQCZC1Z3vnpAJMGQnm">国内下载快，不然卡死</td><td data-page-node-id="wO5bwoB7bbY7T9AuEMobrc"><code data-page-node-id="0rPFIbCL3bOLcRBFC06uw2">01-pip、conda换源.md</code></td></tr>
+    <tr data-page-node-id="rEz9uCeMX0jfK9JS6FdS9H"><td data-page-node-id="AG2WWSqMJYdsYEi3Boz8Xd">② 开放端口</td><td data-page-node-id="bjNIat62fFka428B5xhohT">云机器上的网页/接口能在你本地浏览器打开</td><td data-page-node-id="SJVjIjc80pgEhRj3L3oCmS"><code data-page-node-id="IZZ7v9CmuqKYZ97nj07rQG">02-AutoDL开放端口.md</code></td></tr>
+    <tr data-page-node-id="3KEwWKFYZvpfsFdxPzNS8o"><td data-page-node-id="vyFW2aaH2TzIYBRbLWQdKO">③ 模型下载</td><td data-page-node-id="mDn2dp7NctQlVKREWVO9Mp">把模型权重从网上下到本地</td><td data-page-node-id="GMaTw6lcCBOs2HU8tBfA2G"><code data-page-node-id="qBXXHGcJsyyvg5OuYuBzie">03-模型下载.md</code></td></tr>
+    <tr data-page-node-id="Sw8zglpTX6CeN8VoBJz4OX"><td data-page-node-id="tP3TjQD9eKwXj6pgzrOWAW">④ 提 Issue / PR</td><td data-page-node-id="FHFWhZ6mWAAT9XxB1NuQYe">遇坑求助、给仓库做贡献</td><td data-page-node-id="UIqEW0DhBwYcoCmzKgTXvJ"><code data-page-node-id="vLmOqKTHgkt0I8QizZt4h9">04-Issue&PR&update.md</code></td></tr>
+  </table>
+
+  <h3 data-page-node-id="mFabHNzFyBLvW2yYDCnnBe">2.2 换源（每个模型教程第一步都会让你做）</h3>
+  <pre data-page-node-id="PCUxUJtxXoTuAOMX8G19S4"><code data-page-node-id="fJtZDJ1lLfkPufRFEyPNr7"># pip 换成清华源，下载飞快
+pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+
+# conda 换源（可选）
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/</code></pre>
+
+  <h3 data-page-node-id="mkf0axNLKIiy7p5suX3SJP">2.3 建一个独立的 Python 环境（强烈建议）</h3>
+  <div class="box analogy" data-page-node-id="3FLIkVhcNs8h2ZOei5tffD">
+    <div class="t" data-page-node-id="uerwp1zlBQsnldZoVXKCOk">🔧 生活比喻</div>
+    不同模型要的 Python / 依赖版本像不同菜系的“火候”。<b data-page-node-id="Z1cQBKG0bVMV7BTiuYTGjW">Conda 虚拟环境</b>就是给每道菜单独备一口锅，互不串味。否则 A 模型装完，B 模型就跑不起来了。
+  </div>
+  <pre data-page-node-id="FyUwWlhe2opKR28f3OhZ8E"><code data-page-node-id="LojLRdDA3yhld0G5LkSf1H"># 创建一个叫 qwen 的隔离环境，Python 3.10 最稳
+conda create -n qwen python=3.10 -y
+conda activate qwen   # 进入这个环境，之后装的包只在这里</code></pre>
+
+  <h3 data-page-node-id="YKrpCy8V79dwIFCEoovrWj">2.4 把模型下载下来（三种主流方式）</h3>
+  <p data-page-node-id="22CcQi3gBtuoiHoe82z38e">模型权重（几 GB 到上百 GB 的文件）要从模型托管平台拉到本地。仓库教你 4 种，最常用 2 种：</p>
+
+  <h4 data-page-node-id="OorBwOqCkHYl2NSGWLGAy4">方式 A：HuggingFace + 国内镜像（最通用）</h4>
+  <pre data-page-node-id="DHXiD1iaESocAYY4qOB81e"><code data-page-node-id="Zd8sEclb2mW6CBBZtVNDnz">pip install -U huggingface_hub
+
+# 新建 download.py，用镜像地址加速
+import os
+os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'   # 国内加速镜像
+os.system('huggingface-cli download --resume-download '
+          'Qwen/Qwen2.5-7B-Instruct --local-dir ./Qwen2.5-7B')</code></pre>
+
+  <h4 data-page-node-id="wYbNtk82Briszr6nPTHWLP">方式 B：ModelScope（阿里，国内最稳）</h4>
+  <pre data-page-node-id="QHs8d0aBmCQtuSgXY83jw6"><code data-page-node-id="72HHnZBKpn4k1AlIKBhL3u">pip install modelscope transformers
+
+from modelscope import snapshot_download
+model_dir = snapshot_download(
+    'qwen/Qwen2.5-7B-Instruct',
+    cache_dir='./models'   # 最好写绝对路径
+)</code></pre>
+
+  <div class="box warn" data-page-node-id="VX6QLAaGDpLxqTEF88XcQO">
+    <div class="t" data-page-node-id="OamwrpfrMlr7eRBEfnVEJo">⚠️ 新手最容易栽的坑</div>
+    <ul style="margin:6px 0" data-page-node-id="dk2Ka2SNy8FXh4bJpnZTaj">
+      <li data-page-node-id="mCwJVLoQluIaVAISm7Q9Us"><b data-page-node-id="RMHT7x4GSAveOOASzspSaZ">路径要用绝对路径</b>（如 <code data-page-node-id="x5HMPgAKiZeSyRHO0HOHLB">/root/models/...</code>），相对路径在 Linux 下常出错。</li>
+      <li data-page-node-id="7Z29DJW7LKf7LjOiwFqhVZ">模型很大，<b data-page-node-id="cLWY7C3igZf5m9iTiooRk2">务必用 <code data-page-node-id="CSv3nA1wk6lUJXlkA8F19X">--resume-download</code> 断点续传</b>，别一次下完。</li>
+      <li data-page-node-id="NFYQa4V2VF99YipuFdjPc0">显存不够时，先看第 3 章的“量化”再决定下什么精度的模型。</li>
+    </ul>
+  </div>
+
+  <h2 class="chapter" id="ch3" data-page-node-id="jYPBFVL4NNjom2OREIAnB9"><span class="num" data-page-node-id="iHZzosyX7PnaOffwLFQFOI">第 3 章</span>部署五法（让模型开口说话）</h2>
+
+  <div class="box plain" data-page-node-id="6u81f11JBH5pRPVeZExDqV">
+    <div class="t" data-page-node-id="rdlTw5FZTHf7GZU09z0NpE">💡 一句话大白话</div>
+    “部署”就是把下好的模型加载进内存、能接收你的话并回话。仓库里同一件事写了 5 种姿势，<b data-page-node-id="tfPpclocqpo4DZkZQqBcaL">本质都是“加载模型 + 接收输入 + 生成回复”</b>，区别只在于“谁来调用、给谁看”。
+  </div>
+
+  <table data-page-node-id="fnOZaKDyDA5zhhlmedOcfl">
+    <tr data-page-node-id="SArgYkGHsFpj5jfpJOjHuy"><th data-page-node-id="sVYjNd8KQaWADY1PDmknIB">方法</th><th data-page-node-id="VjPKLotDTxFdUajWR7ESap">它适合什么场景</th><th data-page-node-id="tcvRAGjARkYPYCmYWqQrKu">你看到的样子</th><th data-page-node-id="RynEA8y26lp879du7MIsMQ">难度</th></tr>
+    <tr data-page-node-id="1mihTpu8Y6VLXjq7pKKtzp"><td data-page-node-id="QAJC1UAHnmQHL8WCtLTlyC"><b data-page-node-id="F7CAioDtz3Iz5H7bP9qdYD">① Transformer 基础调用</b></td><td data-page-node-id="n3ZYjHlfiSD2w8mqB2sZzW">写脚本直接跑，理解原理</td><td data-page-node-id="1MOff5fVacAtwkmxkjlNSy">终端里 print 出回复</td><td data-page-node-id="zBB2cKjrUCTyJghJGMVpFn">★</td></tr>
+    <tr data-page-node-id="WxQM622rK7HUBK3mPlewoS"><td data-page-node-id="HFDUg2LtwqofQLD8Qq2xMj"><b data-page-node-id="Z5igNmasNmIOy4gA5H1Wrr">② FastAPI 部署</b></td><td data-page-node-id="UARzcpPt9a7xDXYDdD5JAI">做成接口，给别人/程序调用</td><td data-page-node-id="eI7Y61PYskXBM7RVKTCACT">一个 http 服务 <code data-page-node-id="kaMC3vjSPFfjThCiLF11VL">/chat</code></td><td data-page-node-id="7wdDakqL3qBjXhbyOPpFIl">★★</td></tr>
+    <tr data-page-node-id="9cNlj9S23EV2V6HqE2EI2W"><td data-page-node-id="2d7bUXQ44XiR4t1TCXy6uK"><b data-page-node-id="eRaoHAqoFXixFK6YiG0BT0">③ WebDemo</b></td><td data-page-node-id="x88aApvFAtMU7FzAWf6fGn">做个网页聊天界面自己玩</td><td data-page-node-id="kbWdqZsXJBWJdnDkQk6wF1">浏览器里的聊天框（Gradio）</td><td data-page-node-id="fW5ZGGcm6GrXlV88AMunVh">★★</td></tr>
+    <tr data-page-node-id="OCm1MVaExOWyrmCb3LNqNa"><td data-page-node-id="3K3sY1LHloSO6kNQlViWNj"><b data-page-node-id="brpHynWOxiXaikl4FQXQ2e">④ vLLM 部署</b></td><td data-page-node-id="n6M2kFdBdYLdktBZBNTQaI">高并发、高吞吐、要快</td><td data-page-node-id="6ZWUWSqUuW4grLOiYw02xe">批量高速推理服务</td><td data-page-node-id="qvKqFUjnej4nxWdyVG3CUQ">★★★</td></tr>
+    <tr data-page-node-id="ZVquc5sf8XFQl6lfoAZB3i"><td data-page-node-id="2ZsBQOFrIxh5tBk5JthKvu"><b data-page-node-id="GbexVttl5zE5kAOZtIoBeF">⑤ LangChain 接入</b></td><td data-page-node-id="qRFi68HWf9ROxjsYVIT9PW">接知识库 / 做 Agent 应用</td><td data-page-node-id="XYD6fJdQzPzMCZwllruV20">RAG、智能体工作流</td><td data-page-node-id="AS4wIPHK0MVijQIsOXEjz0">★★★</td></tr>
+  </table>
+
+  <div class="box map" data-page-node-id="goEyG3VD2hnMqeDrwOAhMw">
+    <div class="t" data-page-node-id="ejIQazgWbHp0OSvWe2AOOA">🗺️ 五法怎么选</div>
+    <p style="margin:6px 0" data-page-node-id="Zb79wkiAnzfxfEUS5DsFOL">先跑通 <b data-page-node-id="dD7XmKrZ3L5Dbvy5e7Xbpm">①</b> 理解原理 → 想给别人用就做 <b data-page-node-id="E4h0LnmAryHe367yd9Mq38">②</b> → 想自己点着玩就做 <b data-page-node-id="niGBrRfJ76lzBzu6gwEkBi">③</b> → 要扛流量/追求速度用 <b data-page-node-id="MqICLCAwWTGE9dvuPfHrA0">④</b> → 要接知识库做产品用 <b data-page-node-id="mjFs770t5OluranD26mitX">⑤</b>。</p>
+  </div>
+
+  <h3 data-page-node-id="c2H6KJf4QzHvayhkTYTwkp">3.1 方法①：Transformer 基础调用（必读，万法之源）</h3>
+  <p data-page-node-id="iG2ABP0Jx4csICC7PDEWie">所有部署都从“加载模型和分词器”开始。记住这两行就是你和模型之间的翻译官：</p>
+  <pre data-page-node-id="H0sGxTN3TsJbOHZ2rnAUfX"><code data-page-node-id="8LYDvFU4XZhl24kYGyOZvc">from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# 1) 加载（把模型权重读进显存）
+model = AutoModelForCausalLM.from_pretrained(
+    "./Qwen2.5-7B", device_map="auto", torch_dtype="auto")
+# 2) 分词器（把文字↔数字互转）
+tokenizer = AutoTokenizer.from_pretrained("./Qwen2.5-7B")
+
+# 3) 对话
+messages = [{"role":"user","content":"你好，介绍一下你自己"}]
+text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+inputs = tokenizer(text, return_tensors="pt").to("cuda")
+outputs = model.generate(**inputs, max_new_tokens=512)
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))</code></pre>
+
+  <h3 data-page-node-id="DiA9srYuF41TnYHzxoH4e5">3.2 方法②：FastAPI（把模型变成接口）</h3>
+  <p data-page-node-id="fQkOliLOGD3skYtwj5ysiT">本质：把上面的“对话”包成一个网页能请求的接口。别人发 JSON 过来，你回 JSON。</p>
+  <pre data-page-node-id="q5eB9AYe4bCWzMaO6IBzzd"><code data-page-node-id="89pHE0fCOSZtPSqGGdxuTX">from fastapi import FastAPI
+from pydantic import BaseModel
+app = FastAPI()
+
+class Req(BaseModel):
+    prompt: str
+
+@app.post("/chat")
+def chat(req: Req):
+    # 这里复用 3.1 的 model / tokenizer
+    inputs = tokenizer(req.prompt, return_tensors="pt").to("cuda")
+    out = model.generate(**inputs, max_new_tokens=512)
+    return {"response": tokenizer.decode(out[0], skip_special_tokens=True)}</code></pre>
+  <p data-page-node-id="SXoQwg3IsEk8gXXiZKsOB6">启动：<code data-page-node-id="ngClFqhRnK6mqlfLy9FRnG">uvicorn main:app --host 0.0.0.0 --port 8000</code>，再用 <code data-page-node-id="bXiyscNsa7gU7UmEY07C0g">02-AutoDL开放端口.md</code> 把 8000 端口映射到本地。</p>
+
+  <h3 data-page-node-id="8sbLDl7X4D42polyOkZiPl">3.3 方法③：WebDemo（Gradio 聊天界面）</h3>
+  <p data-page-node-id="oipT3tothCMuhdlMMlx8E7">几行代码生成一个浏览器聊天框，最适合自己体验。</p>
+  <pre data-page-node-id="DnorJUPXyEr3ZAKSsSkIrn"><code data-page-node-id="Qbh04hCEEgjwE4nAosW9rj">import gradio as gr
+def reply(text):
+    # 复用 model/tokenizer 生成
+    return generated_text
+
+gr.ChatInterface(reply).launch(server_name="0.0.0.0", server_port=7860)</code></pre>
+
+  <h3 data-page-node-id="86n6ifrIkQ6keoFkttR7Nf">3.4 方法④：vLLM（要快、要扛量时用）</h3>
+  <p data-page-node-id="BQBpAfvBscaWf3MVexaPV0">vLLM 用“连续批处理(PagedAttention)”技术，吞吐量远超原生 transformers，是<b data-page-node-id="9itFVHdw7dXdLrkAJxdVNf">上线服务</b>的首选。</p>
+  <pre data-page-node-id="ngACfPGOkOHKupQNGPs8eI"><code data-page-node-id="ih2ybYbp7IW09rolvRhoqX">from vllm import LLM, SamplingParams
+llm = LLM(model="./Qwen2.5-7B")
+params = SamplingParams(temperature=0.8, max_tokens=512)
+outputs = llm.generate(["你好，介绍一下你自己"], params)
+print(outputs[0].outputs[0].text)</code></pre>
+
+  <h3 data-page-node-id="x3SE1o8qgIMET48DeEpHhN">3.5 方法⑤：LangChain 接入（接知识库 / 做应用）</h3>
+  <p data-page-node-id="8yWbN348yeo9wF6XCkBdmt">LangChain 是把“大模型 + 你的资料 + 工具”串起来的框架。最常见用法是 <b data-page-node-id="BiFdKqzk0jdjB5ck062KAF">RAG（检索增强）</b>：先搜你自己的文档，再把相关段落喂给模型回答。</p>
+  <pre data-page-node-id="6sENxt1OhcwxFDHDRyvtbT"><code data-page-node-id="K80C5y7LCdNxph931orRSo">from langchain_community.llms import HuggingFacePipeline
+# 把本地模型包成 LangChain 能用的对象
+llm = HuggingFacePipeline(pipeline=your_pipe)
+# 之后即可接 VectorStore / Retriever 做知识库问答</code></pre>
+  <div class="box analogy" data-page-node-id="CfpEdYbhmikfu3QwpHgDe1">
+    <div class="t" data-page-node-id="3YNa3fCue4gFX2BvKfCLIT">🔧 生活比喻</div>
+    原生 transformers 像“你直接跟厨师点菜”；LangChain 像“你雇了个管家，管家先去档案室翻资料、再综合厨师意见，最后给你一份带出处的报告”。做产品离不开它。
+  </div>
+
+  <h3 data-page-node-id="wCdLd3o38TqMH9Fl2TWm6U">3.6 关键概念：量化（显存不够时的救命绳）</h3>
+  <table data-page-node-id="2VBM7a2oALKEavafaU33T5">
+    <tr data-page-node-id="6RZMOkaVFIKmdh2wMVJzPv"><th data-page-node-id="8BEa7HUuSt4Yzocilg3KHG">精度</th><th data-page-node-id="IrxNU2lIgZzKTnsXnxDEp3">显存占用</th><th data-page-node-id="CsVvdTfZ2L16sr5p0qQAGu">说明</th></tr>
+    <tr data-page-node-id="PcebogC98FrrX1gdz6fd51"><td data-page-node-id="DHSW3Wq0sNx5EwlfViiCEB">FP16 / BF16</td><td data-page-node-id="sNYiyYhGbaQC8A0FEBM5AG">7B≈14GB</td><td data-page-node-id="7FH7XtVtrAoOFGsZy3LY5C">原汁原味，最准</td></tr>
+    <tr data-page-node-id="wCBqJByaJTMIrGlaxdC5S1"><td data-page-node-id="8llqbdRMuRrTGlMWeSeGzd">INT8</td><td data-page-node-id="fyLFHgf6VLhYTO5LaceMua">7B≈7GB</td><td data-page-node-id="VKpDSZw39FrvKaT42dKE1l">略损精度，省一半</td></tr>
+    <tr data-page-node-id="bPxvxaWAHSUNC7S67uCsfG"><td data-page-node-id="RqpY4u4HetFjGJ0jJBYTK0">INT4 / GPTQ / AWQ</td><td data-page-node-id="GvXajaxxxNRxwU3tjee4wz">7B≈4GB</td><td data-page-node-id="Jj6VXPdiThbX3Ol8gi7Ywi">笔记本也能跑，精度可接受</td></tr>
+  </table>
+  <p data-page-node-id="kvEDhJVyWSkRrLPWlqLfGs">仓库里很多部署教程会写 <code data-page-node-id="uH2DR5fANnyAv6MvUeiNjj">load_in_4bit=True</code> 或 <code data-page-node-id="jGMbgku4peqDikRMNTFxIL">quantization_config</code>，就是量化。显存小就开 4bit。</p>
+
+  <h2 class="chapter" id="ch4" data-page-node-id="46CyXTYfCENGNbUKeDTpp2"><span class="num" data-page-node-id="2DgPQOM0uSNEuCJ8X6GGkL">第 4 章</span>模型微调（把通用模型变成“你的”模型）</h2>
+
+  <div class="box plain" data-page-node-id="f2GsIHy2bweGNxRKbakEoY">
+    <div class="t" data-page-node-id="eZ48ED2R4VVv3wBIbEDcCd">💡 一句话大白话</div>
+    微调 = 给通用模型做“岗前培训”。只喂它你关心领域的对话样本，它就学会用那种风格/知识回答。
+  </div>
+
+  <div class="box analogy" data-page-node-id="MBuevhUiCuYl1PbrH0RBnd">
+    <div class="t" data-page-node-id="bzA6uwFek04QPvm1bEuHWS">🔧 生活比喻</div>
+    预训练模型是“通才毕业生”；<b data-page-node-id="LoIJz2NYBZov0xOOoN3gDx">全参数微调</b>是让他回炉重造四年（贵、慢、要很多显卡）；<b data-page-node-id="27TEsF6UtZSw8G3Adzhfit">LoRA/QLoRA</b> 是只给他报个两周速成班（便宜、快、只改一小部分）。新手一律从 LoRA 起步。
+  </div>
+
+  <h3 data-page-node-id="vQyWpOKoFpFGfEKHQFEx5a">4.1 两种微调路线对比</h3>
+  <table data-page-node-id="uPLLVtI89vsPSesysOLSno">
+    <tr data-page-node-id="HojlFns34Sd4cDSRVifEBl"><th data-page-node-id="SWFX7Vp1vwvX0PHwpm59FN"></th><th data-page-node-id="SMDwSzFBI4cr7Mzc3GcgIE">全参数微调 (Full)</th><th data-page-node-id="J0tpTLl2IWvfeDhlDKUzCB">LoRA / QLoRA（推荐）</th></tr>
+    <tr data-page-node-id="jkj7meCIxlTLje60KwxtD9"><td data-page-node-id="oeXvWUuv2Wvkfm3VP8ov6q">改动的参数</td><td data-page-node-id="NdbFqSMjYGngz4dgRlvD4G">全部</td><td data-page-node-id="pUgwZRKtXhGNCLLGuBeiE7">只加一小对“适配器”矩阵</td></tr>
+    <tr data-page-node-id="BlkAZd8LbUKfpst6IIRTfK"><td data-page-node-id="MJE5XDr532zJMoF2dRKJDK">显存需求（7B）</td><td data-page-node-id="7Sl5RatS6UafyM25ECw5FH">≥80GB（多卡）</td><td data-page-node-id="PdgOE3ZtkOAgu63MzmuvlH">≥16~24GB（单卡可）</td></tr>
+    <tr data-page-node-id="t0WNjuindPvrmyMcKBK6fO"><td data-page-node-id="UHlvtzFNNRK6GJMEuI5Q7M">速度 / 成本</td><td data-page-node-id="hZTPph2MMl9OBwA7dPfXu4">慢、贵</td><td data-page-node-id="JYxSCIdOlrLjZI3p1oDS44">快、省</td></tr>
+    <tr data-page-node-id="RG5jgHUaIDHlkhIGEEilSd"><td data-page-node-id="cfADWWCxttDZfysHr705so">仓库常见文件</td><td data-page-node-id="p2gpRv46UbSJkA3gaUPE9H">少见</td><td data-page-node-id="CWGfUe2uqtUsXwe7V4bzQJ"><code data-page-node-id="Baq58AslsjYCfnur6pkubU">05-...Lora 微调.md</code></td></tr>
+    <tr data-page-node-id="MGboMAL8IdEQVHKXExihlG"><td data-page-node-id="5YbVb7fsZebh3ZQPOevQlE">QLoRA 是什么</td><td data-page-node-id="zwGy4V6WK4vXQ3DwFAxpH5">—</td><td data-page-node-id="49JJEEtCSUwlOa5eJNexmW">LoRA + 4bit 量化，显存再砍一刀</td></tr>
+  </table>
+
+  <h3 data-page-node-id="yVpY2EaCX2rEpIhsmN2gOj">4.2 微调四步法（所有模型通用）</h3>
+  <div class="flow" data-page-node-id="mVwvb8waoI0TB6oPu2KwEl">
+    <div class="step" data-page-node-id="tWZSAJ2Mirw5wD4iFqofVI"><span class="n" data-page-node-id="dpzzlP3RADtOtfK6wZE8TW">1</span><b data-page-node-id="uo2K9cb4kas1ZABS5jm5aG">准备数据</b><span data-page-node-id="nf4sm0V380kr1LexJ8exMl">整理成对话 jsonl</span></div>
+    <div class="arrow" data-page-node-id="hZRzSQI3HjWcbW91Uc3zvk">→</div>
+    <div class="step" data-page-node-id="RMmGCCHFPqNKQVYO0mU6wo"><span class="n" data-page-node-id="ox0uRvG2ckqdJUkGCPGrH4">2</span><b data-page-node-id="tOqoS95KADODdMIU4noCKp">写配置</b><span data-page-node-id="hsdbShRMfTxEkjW9REQElE">选 LoRA 参数</span></div>
+    <div class="arrow" data-page-node-id="enVyxsKKFGBAquFpteTFGN">→</div>
+    <div class="step" data-page-node-id="5Qazp5DC4HkLiacAMJ1qDA"><span class="n" data-page-node-id="IiSlFWRDkQCCFS5HRhsETv">3</span><b data-page-node-id="FcfLaeyvW4lNnv9vsVKi8D">跑训练</b><span data-page-node-id="Ce5czShOC8ZgBliIuBWxOO">启动脚本</span></div>
+    <div class="arrow" data-page-node-id="1wFwLYM7olhYEZHpUyRbS0">→</div>
+    <div class="step" data-page-node-id="wzA92D40GhZbUpoNKcpJ7n"><span class="n" data-page-node-id="ujfcjAPepqR0QCWvNtEY3b">4</span><b data-page-node-id="uADY2Bc1yBwbz4aJXiyN1R">合并 & 测试</b><span data-page-node-id="hg1RHi92c4zsBpJBKLRHpm">加载适配器对话</span></div>
+  </div>
+
+  <h4 data-page-node-id="1GsqCeIhkK5IW5D7YoZga4">步骤 1：数据集长什么样</h4>
+  <p data-page-node-id="mVxMLCorGwvQcFPo2IpDqQ">仓库 <code data-page-node-id="kQBhWczaLENsbyntJFiVNH">dataset/huanhuan.json</code>（甄嬛语料）是标准格式——一串“人机多轮对话”：</p>
+  <pre data-page-node-id="9IVRI8g3tV7P8oB8ZkWKN7"><code data-page-node-id="UF5vOFcf8dZYhRkUDrpyS1">[
+  {
+    "conversation": [
+      {"role": "user",      "content": "你是谁？"},
+      {"role": "assistant", "content": "臣妾是甄嬛，甄嬛小婉转……"}
+    ]
+  }
+]</code></pre>
+
+  <h4 data-page-node-id="KBXRrGwReGsQDWt5nF7ruF">步骤 2~3：用 XTuner / PEFT 跑 LoRA（范式代码）</h4>
+  <pre data-page-node-id="vELc0W7d9czkt3cXtd0y8J"><code data-page-node-id="K3AbmBbzWCfO391sd5uSA2"># 以 XTuner 为例（仓库 InternLM / Qwen 系列常用）
+# 1. 准备数据：把 json 转成 XL 格式
+xtuner convert shopmallmm ...  # 详见各模型 05 文件
+
+# 2. 复制并改配置
+xtuner copy-cfg qwen2_5_lora ./
+
+# 3. 启动训练（QLoRA 会自己量化基座）
+xtuner train ./qwen2_5_lora.py
+
+# 4. 把 LoRA 权重转回完整模型
+xtuner convert pth_to_hf ./qwen2_5_lora.py ./iter_xxx.pth ./hf_adapter</code></pre>
+  <div class="box warn" data-page-node-id="HTBxTBbKY48jh6jJ9ErjXv">
+    <div class="t" data-page-node-id="ee1Ytyd6dujDZOay0Mx6OX">⚠️ 关键参数直觉</div>
+    <ul style="margin:6px 0" data-page-node-id="iaNL5HaK2CDfUlpdOPfRRp">
+      <li data-page-node-id="BkW922dePRxAKLBeBTbIgS"><code data-page-node-id="8zAN9OiFZNJYwiJFA3XWdk">r</code>（秩）：LoRA 容量，常用 8/16/32，越大越“学得猛”但也越易过拟合。</li>
+      <li data-page-node-id="8tnPCR7g2w3Dkq0d7FzGEk"><code data-page-node-id="9zFbzQKanzp1DZDFaTeK1s">lora_alpha</code>：缩放，常设为 2×r。</li>
+      <li data-page-node-id="7Kf5qYpoezM65maQ0lHB4W"><code data-page-node-id="pH1UIap8ReTsru75SQlgp1">learning_rate</code>：LR，LoRA 一般 1e-4 ~ 2e-4。</li>
+      <li data-page-node-id="Kqx9ifqEDG2gGRrX5pxGgw"><code data-page-node-id="T0F8YNySYPOG2Cfw8bIpEF">max_length</code>：单条样本最大长度，超了截断。</li>
+    </ul>
+  </div>
+
+  <h4 data-page-node-id="4ztvPCeN0FcDnHVp1uVZFB">步骤 4：加载微调后的模型对话</h4>
+  <pre data-page-node-id="IbXAgzyFhBuRnMJeaGnzIV"><code data-page-node-id="tPYTiHNX4qFYhSk2K5igcM">from peft import AutoPeftModelForCausalLM
+model = AutoPeftModelForCausalLM.from_pretrained("./hf_adapter",
+        device_map="auto", torch_dtype="auto")
+# 之后对话代码与 3.1 完全相同</code></pre>
+
+  <h3 data-page-node-id="tCWhnT44g8JfgddNx3lyDr">4.3 训练过程怎么“看得到”（可视化）</h3>
+  <p data-page-node-id="HEOzryEBzmuCVqXPzipnZP">仓库 07 文件常用 <b data-page-node-id="DmPSmu0R65NFzFSQuXLTvJ">SwanLab</b>（国产，类 TensorBoard）记录 loss 曲线。训练脚本里加一行 logger 即可在网页看曲线，判断有没有训崩。</p>
+
+  <h2 class="chapter" id="ch5" data-page-node-id="U8DiW7b4aPLqLBv6hNjM38"><span class="num" data-page-node-id="140KEjlIWce4gaKpqywu7Z">第 5 章</span>多模态与进阶（从“会聊天”到“会看会想”）</h2>
+
+  <h3 data-page-node-id="MMMt9WYNHhJtDTaufgXuNo">5.1 多模态模型（MLLM）</h3>
+  <p data-page-node-id="dIHnc3A8AMk5aaxmbat79Q">普通 LLM 只吃文字；<b data-page-node-id="e3oj4EM84sXVPvBpswrrol">多模态</b>模型还能吃图片/音频/3D。仓库里这类模型命名带后缀：</p>
+  <table data-page-node-id="8oErWL4SLknnAhMrTDosVi">
+    <tr data-page-node-id="K7wmaxxnPGMmuIEi5Ztyw4"><th data-page-node-id="eW0vin2asWjMt1iDHq4mBQ">模型</th><th data-page-node-id="MObKF7CeZIEpbFsH52UyJb">能处理</th></tr>
+    <tr data-page-node-id="6u0P4cxnLUsuCyHiIGGuaH"><td data-page-node-id="Eem44cncMfTr9ZAMHquGOd"><code data-page-node-id="UvDmytsb8Jrlm3elUrrh0Y">Qwen2-VL</code> / <code data-page-node-id="nqiTDtISD9moOSSbXucHs4">Qwen3-VL</code></td><td data-page-node-id="5weYjioK0CjeDBo81Ume0G">图片 + 视频</td></tr>
+    <tr data-page-node-id="4nZb7uIKLBQIEXVsWFDCwB"><td data-page-node-id="SgfE23dkQQGnhKH13jhwSL"><code data-page-node-id="oESL8yDnzTpFbAJg4PlsER">Qwen-Audio</code></td><td data-page-node-id="GDzCWacdSW5EMX90yx2hal">音频</td></tr>
+    <tr data-page-node-id="b7VqBuAEfRrvKRZTOjV5Ys"><td data-page-node-id="7PO3nXhSIdB8VoVhOBR0GB"><code data-page-node-id="413NueWA3Aon2cw5LgVLoB">GLM-4.1V-Thinking</code></td><td data-page-node-id="IqYVnRyAWKgl3DdG6duD0s">图片 + 深度思考</td></tr>
+    <tr data-page-node-id="K9OrDtgpMvHrHCXlfyO9sH"><td data-page-node-id="rLcw8jG8NATL4lErlnkWdb"><code data-page-node-id="La14F7JonH2fVsNlOW6FRg">Hunyuan3D-2</code> / <code data-page-node-id="NAKnO6EwesRRGMZpIzugb8">SpatialLM</code></td><td data-page-node-id="xgDda2H5hDf8lhC0JDFsWt">3D / 空间</td></tr>
+  </table>
+  <p data-page-node-id="utXiEpQd5VwDIzpPCEYGQo">它们的部署代码和文字模型几乎一样，只是输入多一个 <code data-page-node-id="shK3IXAG3Pp3niSoB7Lg5T">image</code> 字段。看懂第 3 章，这类模型照葫芦画瓢即可。</p>
+
+  <h3 data-page-node-id="6r4BHNS6HgkpZmrMnY9JA7">5.2 o1-like 推理链（让模型“先想再答”）</h3>
+  <p data-page-node-id="YFeTsUZ0uyCELVQyUBDNDg">仓库部分模型（如 Qwen2.5 的 06 文件）教实现“思考-回答”两阶段：先让模型输出一段推理过程，再给最终答案。<b data-page-node-id="V2foIwMUpx87XlbpxQHJvW">数学/代码题准确率显著更高</b>。这是当前大模型热点方向，理解它对你面试 AI 岗位很有用。</p>
+
+  <h2 class="chapter" id="ch6" data-page-node-id="tGJqFrJqG5kPixl70p3jcX"><span class="num" data-page-node-id="icPABrxOieyZJefQ7onTs9">第 6 章</span>不同硬件平台（选对货架）</h2>
+  <p data-page-node-id="Yc1HIOZUdmyJJOSuQNK40N">同一套主线，换硬件只看“仓库里对应的那个文件夹”：</p>
+  <table data-page-node-id="NFBYWS7dfGyOgYinVTBhGB">
+    <tr data-page-node-id="GAzl52aUsrq0HfJREXHw2Q"><th data-page-node-id="IasLnh1tnEB05tTlgxlZw8">你的硬件</th><th data-page-node-id="KEhR5HCnQyjAiHhjN6X662">看哪里</th><th data-page-node-id="a6NWZA7T40ybySNCMbnSWa">注意</th></tr>
+    <tr data-page-node-id="TK6zhRHB3N3O9yqEmdN5Og"><td data-page-node-id="VTJk47BADd86cMPsR3r6hq">NVIDIA 显卡（最常见）</td><td data-page-node-id="KSbKmZKmPibZVyF8dls3rw"><code data-page-node-id="WDelBiOj4PD7WfC1y4RmGn">models/</code></td><td data-page-node-id="L5WJKAskuwuukm84pTtDME">主线默认这一套</td></tr>
+    <tr data-page-node-id="ZDC6gphuKkHwUhgcHjcSOJ"><td data-page-node-id="sS0At3KQBElVhUTwb0E8ji">AMD 显卡</td><td data-page-node-id="uVpnNzRteLF03mZmiX30cp"><code data-page-node-id="CWt1CeH5s3fhV27yrfoESa">models_amd/</code></td><td data-page-node-id="wgWzl1I7pBkA5wMMiq5qDb">用 ROCm，工具换 LM Studio / Ollama / llama.cpp</td></tr>
+    <tr data-page-node-id="HNnOZkpi0vEsyfeVG5KLiS"><td data-page-node-id="NMclsraKTpDjJIWUJAk3nn">华为昇腾 NPU</td><td data-page-node-id="u8D1hHE4T2sbqxsWGr0GIa"><code data-page-node-id="god8Ky9ZRDlIm2DJ9H5gnr">models_ascend/</code></td><td data-page-node-id="wsM5kAisWOtiiCQX0GFk54">用 MindIE / vLLM-ascend，需看通用环境指南</td></tr>
+    <tr data-page-node-id="djbOFkkVmTJFitqgHUSEzH"><td data-page-node-id="MbAFIZfXEYpWKJWAz3nSKo">苹果 M 芯片</td><td data-page-node-id="ujyJOMR9U2fzD2VxWYJLBq"><code data-page-node-id="EHL3AtFN93zjH4HKamWBXK">models_mlx/</code></td><td data-page-node-id="q7V4yXPh8MqQSVs8zcHwDB">用 Apple MLX 框架，笔记本本地跑</td></tr>
+  </table>
+
+  <h2 class="chapter" id="ch7" data-page-node-id="BO2r3ukSkqxOPd5aQ32b7w"><span class="num" data-page-node-id="2zOa1644EW0xYRkOwEbBPb">第 7 章</span>实战项目案例（把能力串成产品）</h2>
+  <p data-page-node-id="L5VMrD8OFGdJPyorNv7Rwn"><code data-page-node-id="Z3tgpCB4Vz7qntwmyAesKl">examples/</code> 是“学完主线后看别人怎么落地”的范本：</p>
+  <table data-page-node-id="ZqCmQa5xSs3a6TIG2iTVWt">
+    <tr data-page-node-id="4m43dItCMIFn5qu8Fi2CgL"><th data-page-node-id="7va6n9DHMzFn0oKzlHPAn7">项目</th><th data-page-node-id="PXbOLnfbgr1ZwOaYAZnDNp">它教你</th></tr>
+    <tr data-page-node-id="1VFDogr49HNEDWVoPDSUu9"><td data-page-node-id="gD8Wkg3JP0EU0F1mOQuZLa"><b data-page-node-id="sIsARrqLjhsBGILvSwEPNo">Chat-嬛嬛</b></td><td data-page-node-id="jskCF4Q9hp43RRvJBPoTj1">用《甄嬛传》台词做 LoRA 微调，得到甄嬛语气的聊天模型（最经典的微调 demo）</td></tr>
+    <tr data-page-node-id="tQBPZ06wkWtCaz8XcYSRl9"><td data-page-node-id="fwqZvVG7VFNTy7vFOMKHu8"><b data-page-node-id="qxBGAMyOITcOYOcruTo6wT">Tianji-天机</b></td><td data-page-node-id="2QHcFBP4hChNPnmIwUWe44">人情世故社交场景：提示词 + 智能体 + 数据 + 微调 + RAG 全流程</td></tr>
+    <tr data-page-node-id="kCy6rLg43d1g0uVibnxAlH"><td data-page-node-id="iGLoDkWjh5owmQy1VA72oO"><b data-page-node-id="GXihwtkx8W2rcizpL7IjmO">AMChat</b></td><td data-page-node-id="O3go5COlHr6VqtxNGqDDFx">基于 InternLM2-Math 做高等数学答疑（垂直领域 LoRA）</td></tr>
+    <tr data-page-node-id="Gd0e6sv7WauD5rONoz5cqO"><td data-page-node-id="td2RFMATPJZkXqYaaZQ1cG"><b data-page-node-id="H9vaGDb0vkkBkPC65eTBTu">数字生命</b></td><td data-page-node-id="Z56KxsNxWysH5ECicGcRms">用特制数据集微调出“像你自己”的 AI，亮点是<b data-page-node-id="hIpkG3CFSMPKmkO1YAMkF3">数据集制作</b></td></tr>
+  </table>
+
+  <h2 class="chapter" id="ch8" data-page-node-id="me4yDh7rd5CWAMgYdp5E84"><span class="num" data-page-node-id="QluFUxC9plzjYDfcuWjkqs">第 8 章</span>学习路线与排坑 FAQ</h2>
+
+  <h3 data-page-node-id="7khigdhiSnU5yUeHYBNRQH">8.1 三个月路线图（给转型 AI 岗位的你）</h3>
+  <ol data-page-node-id="viuHsVutued7W8wTk5ywIW">
+    <li data-page-node-id="SPQ0V9pmVQsN4cnkldwBEg"><b data-page-node-id="PVvHQhpXBzbojHH5NmOFBL">第 1 周</b>：通读本书，租 AutoDL 机器，跑通 Qwen2.5 的 ①→③ 部署。</li>
+    <li data-page-node-id="X4jhtZDlEAxkMNZRsKugDY"><b data-page-node-id="wxP3F51uSMHhyH35dlJyWe">第 2~3 周</b>：做一遍甄嬛 LoRA 微调（05/07 文件），理解数据→训练→合并全流程。</li>
+    <li data-page-node-id="mPvYz2XSJOAJRuiRgvgBKa"><b data-page-node-id="49IsdDBQrP890TtIgS4u2j">第 4~6 周</b>：用 LangChain + 一个模型搭个“个人知识库助手”（对应方法⑤）。</li>
+    <li data-page-node-id="iABgEHgBVF0Wm5oNzneq29"><b data-page-node-id="OrFwrw1mLr6xsWXRkmhsRe">第 2 月</b>：挑一个多模态模型（Qwen2-VL）跑通图文，理解 MLLM。</li>
+    <li data-page-node-id="4uQsHQ1eYbDuSpSplDIzbX"><b data-page-node-id="mQ8yfLHO5LvWp8mlhqXx1s">第 3 月</b>：读 <code data-page-node-id="upWNc9rFnG49DOUQyqFLSr">examples/</code>，做一个完整小项目写进简历（这正是你 job-hunter 作品集的素材）。</li>
+  </ol>
+
+  <h3 data-page-node-id="eyk5cIl64wtcXLGAYldCDt">8.2 新手高频坑</h3>
+  <table data-page-node-id="HbpmtagGoSA10AyYuCXEZl">
+    <tr data-page-node-id="qibOAS9bXjDj4s3ahkLMEI"><th data-page-node-id="w0J7nEbqHpTzpgf5C3XqgQ">现象</th><th data-page-node-id="XnYmKXdPAjomzzvGeZdJtU">原因 / 解法</th></tr>
+    <tr data-page-node-id="AnUott3e3HxMU9bqOFTm7V"><td data-page-node-id="YU2EkrrCMwvr1aYUgOaVIy">CUDA out of memory</td><td data-page-node-id="qluSYrE6aqR4OWikQC1GHc">显存爆了 → 开 4bit 量化、换小模型、或用 QLoRA</td></tr>
+    <tr data-page-node-id="ORltMhjGoIs0GY3ucKQ00q"><td data-page-node-id="t8CUZYaH95lkztFQvY9DZU">下载模型极慢/中断</td><td data-page-node-id="mh2IAckNLX37JSo9dGmAfn">没换源 / 没用镜像 / 没加 <code data-page-node-id="ex1elAJDsuIb14T9WNr1La">--resume-download</code></td></tr>
+    <tr data-page-node-id="XidRhAQDtziNUx6ZQLgPHf"><td data-page-node-id="bCQMUtDAUWzdDuX4XhJmAX">网页打不开</td><td data-page-node-id="2ZPmD4PpGXIBGJHimDTiqg">云机器端口没映射（看 <code data-page-node-id="I7BHOIOCHebZftEUtuhzJB">02-AutoDL开放端口.md</code>）</td></tr>
+    <tr data-page-node-id="F0Q1XiWilFPAEALdHaCRSF"><td data-page-node-id="fmcapXCAQuq6Vx0p7LyoQj">导入包报错</td><td data-page-node-id="LkgpMojxhtImRrVDlroyJX">装错环境 → 确认 <code data-page-node-id="Yt3HID0upThYARrVuc7hMh">conda activate</code> 了、版本匹配</td></tr>
+    <tr data-page-node-id="xMVvLRXZsxBctvq9MHNgji"><td data-page-node-id="QXyv1KczhwemSMZr5qUBaa">微调后“学傻了”</td><td data-page-node-id="hr36EsUUTQeXJfWQOBYbVR">学习率太大 / 数据太少 → 调小 lr、补数据</td></tr>
+  </table>
+
+  <div class="box map" data-page-node-id="sBDRY3KzRZASgQkehEeyr8">
+    <div class="t" data-page-node-id="SpQzK6lDaTaa71VBBsIZeQ">🗺️ 最后再送你一张“读任意模型文件”的通用公式</div>
+    <p style="margin:6px 0" data-page-node-id="mz2UeNiGd0p2MrURPP7OZf">拿到 <code data-page-node-id="AzVYQfSSeavKtNTFRcTVxA">models/任意模型/</code> 文件夹，按这个顺序读就不会晕：</p>
+    <p style="margin:6px 0" data-page-node-id="jVcFxs7rdJSVkh2bHSNRBb"><span class="pill" data-page-node-id="Y7E60EUcQ9fiwxmV0PyfsZ">先 readme</span> 看模型简介 → <span class="pill" data-page-node-id="FX2IJt9QJBegF4vaEEP8sY">找 0x 环境</span> 装依赖 → <span class="pill" data-page-node-id="dFDConHf98hC4JQ36p66JB">跑 01</span> 基础调用 → <span class="pill" data-page-node-id="pZCVBbZU8Ty3wt7tFG2OYn">挑 02~04</span> 你要的部署方式 → <span class="pill" data-page-node-id="s5PInyFuFBKpRlWCFaXyrT">做 05/07</span> 微调。所有模型都是这个骨架，差异只在“模型名和个别参数”。</p>
+  </div>
+
+  <h2 class="chapter" id="appendix" data-page-node-id="ZvOlhgTxsmLoUJ4OrOf8rD"><span class="num" data-page-node-id="bwInxbfnrJo4NNZsamPuHw">附录</span>术语表（随查随用）</h2>
+  <table data-page-node-id="C3VqU3tyvKEqBUcmfIdLT3">
+    <tr data-page-node-id="cIear9rgRqnZuZpfc8xy5w"><th data-page-node-id="6CRklbs0sSRjkhl0JBmDrG">术语</th><th data-page-node-id="bMzoieQdrsBIXGnjafPd0O">一句话</th></tr>
+    <tr data-page-node-id="5ZccU5ElGDmyNnmugKKEVc"><td data-page-node-id="MF1nvNbZUszEbKCHax50Su">LLM</td><td data-page-node-id="FxSsinQxZqjvB1pDN5uuvL">大语言模型，吃文字吐文字的 AI</td></tr>
+    <tr data-page-node-id="VlFpxw5a83eW4rBsqQQDYW"><td data-page-node-id="X2MZy4BVLvXfxysAi5dqNu">MLLM</td><td data-page-node-id="QOaKW9qvbGiPHbUlARaUW7">多模态大模型，还能吃图/音/视频</td></tr>
+    <tr data-page-node-id="sVUG4yWDYrECYPoXN3a0SM"><td data-page-node-id="TkbBH9Mz6Tn6Ydlxn6mV7o">Conda</td><td data-page-node-id="Cfhhwallk44G7AqEYfxpAa">Python 环境管理器，给每个项目单独备“锅”</td></tr>
+    <tr data-page-node-id="DB26o133AdJUbTHxAZnSVy"><td data-page-node-id="IdsXVJIa7SBEKNmgGLjCkR">Transformer</td><td data-page-node-id="zdCQlsLERAFpVzvbphFyMl">当下大模型的基础架构库（HuggingFace 出品）</td></tr>
+    <tr data-page-node-id="X93ikpZO66xif5gQKYATwH"><td data-page-node-id="jOXYEz41ClFF0OQOMOKM8B">Tokenizer</td><td data-page-node-id="PZAko4h38419j1f9Tazd41">分词器，文字↔数字的中介</td></tr>
+    <tr data-page-node-id="0hobjQ8ZmLhpCXVpmnvQ5a"><td data-page-node-id="htd8hSVtZD06Bub9y5jF8h">CUDA</td><td data-page-node-id="RABnmTxWteG6Oouztzo1QT">NVIDIA 显卡的并行计算平台</td></tr>
+    <tr data-page-node-id="6KFgjBz2hAIG54TDpjf4Ks"><td data-page-node-id="KUvwvW46SZbA1bwTlauqEZ">量化 (Quantization)</td><td data-page-node-id="fCXAeOhYyd1MphbelCkAlE">压缩模型精度省显存（FP16→INT4）</td></tr>
+    <tr data-page-node-id="Lstkyqk9ARMqMmMUoYePtm"><td data-page-node-id="wl7VM1SR7FrBrmcZrruFum">LoRA / QLoRA</td><td data-page-node-id="AUBb3k0mM56BNNZO4sxRDs">高效微调法，只训一小部分参数</td></tr>
+    <tr data-page-node-id="5NkFGwt2U3AFZBXx1U977Z"><td data-page-node-id="BilbsKFTvZsGRecjgb4AJN">vLLM</td><td data-page-node-id="zU49wDlI7SUrbZbezgZu8Y">高性能推理框架，吞吐远超原生</td></tr>
+    <tr data-page-node-id="Lc9746bW3XKoGwgfOFCwo4"><td data-page-node-id="4cKfQa8oqAL98dSMH3CJgn">LangChain</td><td data-page-node-id="r41eCdEQTdnI3LcUiC8OD6">把模型+数据+工具串成应用的框架</td></tr>
+    <tr data-page-node-id="v2bKCjoKaPrgBWFSBONvoF"><td data-page-node-id="E0jJ8sF9Py1Ic7Xwnn1lGH">RAG</td><td data-page-node-id="TBhAfu0FocrujwYOb6zc7X">检索增强：先搜资料再让模型答，防胡说</td></tr>
+    <tr data-page-node-id="S0PjuodDoO5QLKJGa3pRD7"><td data-page-node-id="0RsxxckC10Z1sHFMQDYYnE">FastAPI</td><td data-page-node-id="VSsAyEZZh6XTragKuUdza3">用 Python 写网页接口的工具</td></tr>
+    <tr data-page-node-id="CNzpj2BfAofhtZNYwAnCkv"><td data-page-node-id="cS0SPsZgDH3AZlB5eMfl9B">Gradio</td><td data-page-node-id="SIlMXqW5saNsmhcDF9Dqym">几行代码生成网页 Demo 界面</td></tr>
+    <tr data-page-node-id="iaFKr3XEwCGL5fjT0iFoWj"><td data-page-node-id="rowyzdSmC2TrJ3oCQLH7Yi">SwanLab</td><td data-page-node-id="gJ8ZGXdwEeDxjOUzuqTDl8">国产训练可视化工具（看 loss 曲线）</td></tr>
+    <tr data-page-node-id="6uHFedo5EeGMJWZOgGLcTe"><td data-page-node-id="cn63xyC8hsW7hYaWAekxY8">ModelScope</td><td data-page-node-id="0RqVu4h4Rnb7vLV6pMOQtN">阿里模型托管平台，国内下模型稳</td></tr>
+  </table>
+
+  <div class="footnote" data-page-node-id="55sNPHhnQuHJtxS3eV68PQ">
+    本教科书由 self-llm 仓库（datawhalechina/self-llm，《开源大模型食用指南》）重构而来，所有方法、文件路径与工具均对应原仓库真实结构。原仓库持续更新，模型列表与具体参数以仓库最新版为准。建议配合原仓库 <code data-page-node-id="488MWixltx72Ga1v5OY4DP">models/</code> 目录边读边练。
+  </div>
+
+</div>
+</body>
+</html>
